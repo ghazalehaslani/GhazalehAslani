@@ -1,0 +1,109 @@
+
+MyData<-read.csv(file="C:\\Users\\gaslani\\Downloads\\Crash_Analysis_System_(CAS)_data.csv")
+names(MyData)
+
+Reg.Otago<-MyData[MyData$region=="Otago Region",]
+Reg.Tasman<-MyData[MyData$region=="Tasman Region",]
+Reg.Canterbury <-MyData[MyData$region=="Canterbury Region",]
+Reg.Hawke <-MyData[MyData$region=="Hawke's Bay Region",]
+Reg.Northland <-MyData[MyData$region=="Northland Region",]
+Reg.Marlborough <-MyData[MyData$region=="Marlborough Region",]
+Reg.Waikato  <-MyData[MyData$region=="Waikato Region",]
+Reg.ManawatÅ  <-MyData[MyData$region=="ManawatÅ«-Whanganui Region",]
+Reg.Taranaki  <-MyData[MyData$region=="Taranaki Region",]
+Reg.Wellington <-MyData[MyData$region=="Wellington Region",]
+Reg.Auckland <-MyData[MyData$region=="Auckland Region",]
+Reg.BayofPlenty<-MyData[MyData$region=="Bay of Plenty Region",]
+Reg.Gisborne<-MyData[MyData$region=="Gisborne Region",]
+Reg.Nelson<-MyData[MyData$region=="Nelson Region",]
+Reg.WestCoast<-MyData[MyData$region=="West Coast Region",]
+Reg.Southland<-MyData[MyData$region=="Southland Region",]
+# Clustering all NZ
+mylist = do.call("list", mget(grep("Reg", ls(), value=T)))
+
+temp_cl<-data.frame()
+Result<-data.frame( Region=character(),
+                    TotalfatalCount=numeric(),
+                    TotalminorInjury=numeric(),
+                    TotalSeriousInjury=numeric(),
+                    stringsAsFactors=FALSE)
+
+
+for (g in 1:length(mylist)){
+temp_cl<-data.frame("TotalfatalCount"=sum(na.omit(mylist[[g]]$fatalCount)),
+                    "TotalminorInjury"=sum(na.omit(mylist[[g]]$minorInjuryCount)),
+                    "TotalSeriousInjury"=sum(na.omit(mylist[[g]]$seriousInjuryCount)),
+                          "Region"=mylist[[g]]$region[1])
+Result<-rbind(Result,temp_cl)
+
+}
+
+name<-Result %>% select(Region) 
+rownames(Result)=name$Region 
+Cluster_temp<-Result%>% select(-c(Region))
+dis_mat=dist(Cluster_temp, method = "euclidean")
+hc=hclust(dis_mat, method="average")
+
+plot(hc)
+rect.hclust(hc, k=5, border="red")
+
+
+# clusterin just canterbury
+Canterbury<-Reg.Canterbury %>% select(c("fatalCount" , "minorInjuryCount","crashSeverity","seriousInjuryCount","region" , "weatherA","tlaName","bus","bicycle","motorcycle","taxi","speedLimit","truck","otherVehicleType"))%>% mutate(weather= case_when(
+  weatherA== "Fine"   ~ 1,
+  weatherA== "Light rain"   ~ 2,
+  weatherA== "Heavy rain"    ~ 3,
+  weatherA== "Mist or Fog"   ~ 4,
+  weatherA== "Snow"   ~ 5,
+  weatherA== "Hail or Sleet"   ~ 6,
+  weatherA== "Null"   ~ 7,) )%>% 
+  mutate(District= case_when(
+    tlaName== "Christchurch City"   ~ 1,
+    tlaName== "Kaikoura District"   ~ 2,
+    tlaName== "Waimakariri District"    ~ 3,
+    tlaName== "Ashburton District"   ~ 4,
+    tlaName== "Waimate District"   ~ 5,
+    tlaName== "Selwyn District"   ~ 6,
+    tlaName== "Hurunui District"   ~ 7,
+    tlaName== "Timaru District"   ~ 8,
+    tlaName== "Mackenzie District"    ~ 9,
+    tlaName== "Waitaki District"    ~ 10,
+  )
+  )
+
+
+temp_cl<-data.frame()
+Result<-data.frame( District=character(),
+                    TotalfatalCount=numeric(),
+                    TotalminorInjury=numeric(),
+                    TotalSeriousInjury=numeric(),
+                    stringsAsFactors=FALSE)
+
+
+for (g in 1:10){
+  temp_cl<-data.frame("TotalfatalCount"=sum(na.omit(Canterbury[Canterbury$District==g,]$fatalCount)),
+                      "TotalminorInjury"=sum(na.omit(Canterbury[Canterbury$District==g,]$minorInjuryCount)),
+                      "TotalSeriousInjury"=sum(na.omit(Canterbury[Canterbury$District==g,]$seriousInjuryCount)),
+                      "District"=Canterbury[Canterbury$District==g,]$tlaName[1])
+  Result<-rbind(Result,temp_cl)
+  
+}
+
+name<-Result %>% select(District) 
+rownames(Result)=name$District
+Cluster_temp<-Result%>% select(-c(District))
+dis_mat=dist(Cluster_temp, method = "euclidean")
+hc=hclust(dis_mat, method="average")
+
+plot(hc)
+rect.hclust(hc, k=3, border="red")
+
+
+# Regression part
+totalCrashCount=Canterbury$fatalCount+Canterbury$minorInjuryCount+Canterbury$seriousInjuryCount
+dd<-Canterbury %>% mutate(totalCrashCount) %>% drop_na()
+na.omit(dd)
+
+lm.model<-lm(totalCrashCount~bus+bicycle+motorcycle+otherVehicleType, data = dd)
+summary(lm.model) 
+
