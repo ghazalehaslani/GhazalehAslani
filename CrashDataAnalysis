@@ -1,0 +1,63 @@
+---
+title: "crash"
+author: ""
+date: "02/11/2021"
+output: word_document
+---
+
+```{r, warning=FALSE, echo=FALSE,message=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(corrplot)
+CAS_data <- read.csv(file="C:\\Users\\gaslani\\Downloads\\Crash_Analysis_System_(CAS)_data.csv", stringsAsFactors=TRUE,na.strings=c("","NA"))
+CAS_data$ï..X<-NULL
+CAS_data$Y<-NULL
+CAS_data<-CAS_data%>%
+  dplyr::mutate(region=recode(region,"ManawatÅ«-Whanganui Region"="Manawatu-Whanganui Region"),
+       crashSeverity=fct_relevel(crashSeverity,"Fatal Crash","Serious Crash","Minor Crash","Non-Injury Crash"),
+       roadCharacter=recode(roadCharacter,"Rail xing"="Rail crossing"))
+```
+I have excluded X and Y as they are geographical coordinates, I don't think they are useful for the purpose of this report.
+```{r}
+#summary(CAS_data)
+```
+
+```{r}
+CAS_data%>%
+  filter(!is.na(weatherA),light!="Unknown",weatherA!="Null")%>%
+  dplyr::count(weatherA,light,)%>%
+  dplyr::group_by(weatherA)%>%
+  dplyr::mutate(prop = prop.table(n))%>%
+  ggplot(aes(x=weatherA,y=prop,fill=light)) + geom_bar(stat='identity')+scale_y_continuous(labels = scales::percent)+
+  xlab("") + ylab("Percentage")+
+  scale_fill_viridis_d(option = "turbo")
+```
+
+```{r}
+CAS_data%>%
+  filter(!is.na(region))%>%
+  dplyr::count(region,crashSeverity)%>%
+  dplyr::group_by(region)%>%
+  dplyr::mutate(prop = prop.table(n))%>%
+  ggplot(aes(x=region,y=prop,fill=crashSeverity)) + geom_bar(stat='identity')+scale_y_continuous(labels = scales::percent)+
+  coord_flip() + xlab("") + ylab("Percentage")+
+  scale_fill_viridis_d(option="turbo")
+```
+```{r}
+CAS_data%>%
+  filter(roadCharacter!="Nil")%>%
+  dplyr::count(roadCharacter,crashSeverity)%>%
+  dplyr::group_by(roadCharacter)%>%
+  dplyr::mutate(prop = prop.table(n))%>%
+  ggplot(aes(x=roadCharacter,y=prop,fill=crashSeverity)) + geom_bar(stat='identity')+scale_y_continuous(labels = scales::percent)+
+  coord_flip() + xlab("") + ylab("Percentage")+
+  scale_fill_viridis_d(option = "turbo")
+```
+```{r}
+CAS_data%>%
+  filter(roadLane!="Null",!is.na(fatalCount),!is.na(holiday))%>%
+  ggplot(aes(x=crashFinancialYear, y=fatalCount,fill=holiday)) + 
+  geom_bar(stat="identity") +scale_fill_viridis_d(option = "turbo") +
+  labs(fill = "")+  xlab("")+  ylab("Fatalties")+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1,size=12))
+```
